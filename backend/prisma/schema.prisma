@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  studentId    String        @unique
+  password     String
+  isVerified   Boolean       @default(false)
+  otp          String?
+  otpExpiry    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now())
+  userProblems UserProblem[]
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+model Problem{
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  difficulty    Difficulty
+  constraints   String
+  timeLimitMs   Int           @default(2000)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  memoryLimitKb Int @default(256000)
+  starterCode   Json?
+  isPublished   Boolean @default(false)
+  testCases     TestCase[]
+  UserProblem   UserProblem[]
+}
+
+model TestCase {
+  id             String     @id @default(cuid())
+  problemId      String
+
+  // Execution Data
+  input          String
+  expectedOutput String
+
+  // UI Presentation Data
+  displayInput   String?
+  displayOutput  String?
+  explanation    String?    // Optional: AI-generated explanation for the example
+  order          Int        @default(0)
+
+  // Access Control
+  visibility     Visibility @default(PUBLIC)
+
+  // Relations & Indexes
+  problem        Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+}
+
+model UserProblem {
+  id          String   @id @default(cuid())
+  userId      String
+  problemId   String
+  solved      Boolean  @default(false)
+  submissions Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+  problem     Problem  @relation(fields: [problemId], references: [id])
+
+  @@unique([userId, problemId])
+}
